@@ -1,17 +1,19 @@
 {
   "name": "Ethos",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Ethereum Browser",
   "main": "app://ethos/static/bootstrap.html",
   "node-main": "./lib/server.js",
-  "node-remote": "http://eth",
+  "node-remote": "http://eth;app://",
   "chromium-args": "--disable-web-security",
   "window": {
     "show": true,
     "toolbar": true,
+    "frame": true,
+    "icon": "./static/assets/ethos-logo.png",
     "position": "center",
-    "width": 500,
-    "height": 500,
+    "width": 600,
+    "height": 600,
     "min_width": 300,
     "min_height": 200
   },
@@ -19,10 +21,12 @@
   "inject-js-start": "./static/assets/inject.bundle.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "server": "coffee ./lib/server.coffee",
+    "server": "npm run compile && coffee ./lib/server.coffee",
     "build": "npm install && rm -r ./build/Ethos* && npm run compile && coffee ./build/build.coffee",
     "build-dev": "npm run compile && nwbuild -r .",
-    "compile": "browserify -t coffeeify ./lib/inject.coffee > ./static/assets/inject.bundle.js"
+    "dev": "nwbuild -r .",
+    "compile": "npm run compile-inject",
+    "compile-inject": "browserify -t coffeeify -e ./lib/inject.coffee > ./static/assets/inject.bundle.js"
   },
   "repository": {
     "type": "git",

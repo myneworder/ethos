@@ -1,116 +1,87 @@
+
+
 express = require( 'express' )
 http = require( 'http' )
 request = require( 'request' )
 jade = require( 'jade' )
 path = require( 'path' )
 winston = require( 'winston' )
+_ = require( 'underscore' )
+
+EthosRPC = require( './EthosRPC.coffee')(winston)
+DAppManager = require( './DAppManager.coffee' )
 
 PORT = 8080
+RPC_PORT = 7001
+
 app = express()
 app.set( 'views', __dirname + '/../views' )
 app.set( 'view engine', 'jade' )
 
-server = http.createServer( app )
-server.listen( PORT )
+app.listen( PORT )
 
 winston.add( winston.transports.File, { 
   filename: 'ethos.log',
   handleExceptions: true
 })
 
+process.on 'uncaughtException', (err) -> 
+  console.log( err )
+  winston.error( err )
+
 winston.info( "Ethos server started at http://localhost:#{ PORT }" )
 
 
 
-options = {
-  #int port of rpc server, default 5080 for http or 5433 for https
-  port: 7000,
-  # string domain name or ip of rpc server, default '127.0.0.1'
-  host: 'eth',
-  # string with default path, default '/'
-  path: '/',
-  # boolean false to turn rpc checks off, default true
-  strict: false
-}
-rpc = require('node-json-rpc')
-serv = new rpc.Server(options)
-
-serv.addMethod 'logInfo', (para, callback) ->
-  winston.info( 'RPC Logging...' )
-  winston.info( para );
-  callback( null, 'ok' );
-
-serv.addMethod 'logWarn', (para, callback) ->
-  winston.info( 'RPC Logging...' )
-  winston.warn( para );
-  callback( null, 'ok' );
-
-serv.addMethod 'logError', (para, callback) ->
-  winston.info( 'RPC Logging...' )
-  winston.error( para );
-  callback( null, 'ok' );
-
-
-
-serv.addMethod 'myMethod', (para, callback) ->
-  # Add 2 or more parameters together
-  winston.info( 'myMethod RPC' )
-  if para.length == 2
-    result = para[0] + para[1]
-  else if para.length > 2
-    result = 0
-    para.forEach (v, i) ->
-      result += v
-  else
-    error = { code: -32602, message: "Invalid params" }
-  callback(error, result)
-
-
-# Start the server
-serv.start (error) ->
-  # Did server start succeed ?
-  if error 
-    throw error
-  else 
-    winston.info('Ethos RPC Server running on port 7000 ...')
 
 # Ethereum Network
 # FIXME: Does not currently compile on windows
+# try
 
-#nodeEthereum = require( './node-ethereum' )
-# ethApp = new nodeEthereum()
+#   nodeEthereum = require( './node-ethereum' )
+#   ethApp = new nodeEthereum()
+  
+#   ethApp.start ->
+#     winston.info( 'node-ethereum running...' )
 
-#ethApp.start ->
-#  app.get '/etherchain', (req,res) ->
-#    res.render( 'etherchain', ethApp )
+# catch err
+#   winston.error "Error loading node-ethereum", err
 
+# winston.info "Loaded ethereum-node."
 
-DAppManager = require( './DAppManager' )
+# DApp Manager
+dappManager = new DAppManager( rootDir: path.join( __dirname, '../dapps' ) )
+winston.info 'DApps: ', Object.keys dappManager.dapps
 
-manager = new DAppManager
-  rootDir: path.join( __dirname, '../dapps' )
+# RPC
+rpcServer = new EthosRPC
+  port: RPC_PORT
+  host: 'eth'
+  path: '/'
+  dappManager: dappManager
 
-winston.info 'DApps: ', manager.dapps.map (app) -> app.name
+rpcServer.start (err) ->
+  throw err if err
+  winston.info( "Ethos RPC Server running on port #{ RPC_PORT }")
 
-app.get '/', (req, res) ->
-  res.render( 'index', { dapps: manager.dapps } );
+# Intercepts all requests and checks if it needs to load a DApp.
+# If a DApp is loaded then assets are served from that DApps root folder.
+app.use( dappManager.middleware( app, winston ) )
 
-app.get '/static/*', (req, res) ->
-  res.sendFile( req.url.replace('/static/', '' )  , {root: './static'});
+# Ethos specific routes
+# Redirect to ethos namespace
+app.get '/', (req,res) -> 
+  winston.info "Redirecting to Ethos DApp."
+  res.redirect '/ethos'
 
+# Serve favicon
+app.get '/favicon.ico', (req,res) -> res.sendFile( './assets/favicon.ico', root: './static' )
 
+# Render Ethos index view
+app.get '/ethos/', (req, res) ->
+  dappManager.currentDApp = 'ethos'
+  res.render( 'index', { dapps: dappManager.dapps } )
 
-# Torrents and Swarm
-app.swarmClient = {}
-
-# swarm = require( './swarm' )
-# swarmClient = swarm( dataDir: './data/data', torrentDir: './data/torrents' )
-
-# app.get '/swarm', (req,res) ->
-#   res.render( 'swarm', torrents: swarmClient.torrents )
-
-
-
-# URL Resolution
-# require( './URLProxy')( app, server )
-
+# Serve other ethos assets
+app.get '/ethos/static/*', (req, res) ->
+  res.sendFile( req.url.replace('/ethos/static/', '' )  , {root: './static'})

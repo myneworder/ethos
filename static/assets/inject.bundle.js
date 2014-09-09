@@ -1,83 +1,192 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-(function (global){
-var client, jquery, parseEthQuery, rpc, rpcLog, url;
-
-console.log("Ethos inject.coffee: ok");
-
-jquery = require('jquery');
-
-url = require('url');
-
-window.eth = {
-  client: 'ethos'
-};
-
-if (typeof global !== "undefined" && global !== null ? global.require : void 0) {
+(function() {
+  var client, jquery, parseEthQuery, rpc, url;
+  if (window.EthosInjectSkip) {
+    return;
+  }
+  console.log("Ethos inject.coffee: ok", window);
+  window.EthosInjectSkip = true;
+  window.onerror = function(errorMsg, url, lineNumber, column, errorObj) {
+    return alert('Error: ' + errorMsg + ' Script: ' + url + ' Line: ' + lineNumber, +' Column: ' + column + ' StackTrace: ' + errorObj);
+  };
+  document.addEventListener('keyup', function(e) {
+    if (e.keyCode === 'O'.charCodeAt(0) && e.ctrlKey) {
+      return console.log('open');
+    } else if (e.keyCode === 'S'.charCodeAt(0) && e.ctrlKey) {
+      return console.log('save');
+    } else if (e.keyCode === 'H'.charCodeAt(0) && e.ctrlKey) {
+      console.log('home');
+      return window.location.href = 'http://eth:8080/ethos#home';
+    }
+  });
+  window.jquery = jquery = require('jquery');
+  url = require('url');
   rpc = require('node-json-rpc');
   client = new rpc.Client({
-    port: 7000,
+    port: 7001,
     host: '127.0.0.1',
     path: '/',
     strict: false
   });
-  rpcLog = function(type, args) {
+  rpc = function(method, args, cb) {
+    if (!args) {
+      args = [];
+    }
     if (args.length) {
       args = args[0];
     }
     return client.call({
       jsonrpc: '2.0',
-      method: type,
+      method: method,
       params: args
-    });
+    }, cb);
   };
+  client.call({
+    jsonrpc: '2.0',
+    method: 'ping',
+    params: []
+  }, function(err, resp) {
+    if (!err && (resp != null ? resp.result : void 0)) {
+      return console.log("RPC Ping completed: " + resp.result + ".");
+    } else {
+      return console.error("RPC Ping Failed.", err);
+    }
+  });
   if (typeof window !== "undefined" && window !== null) {
     window.winston = {
       error: function() {
-        return rpcLog('logError', arguments);
+        return rpc('logError', arguments);
       },
       warn: function() {
-        return rpcLog('logWarn', arguments);
+        return rpc('logWarn', arguments);
       },
       info: function() {
-        return rpcLog('logInfo', arguments);
+        return rpc('logInfo', arguments);
       }
     };
   }
-}
-
-parseEthQuery = function(href) {
-  var query;
-  query = url.parse(href, true).query;
-  if (!query.dapp) {
-    query.dapp = query.address ? 'etherchain' : query.ammount ? 'walleth' : void 0;
-  }
-  return query;
-};
-
-jquery(function() {
-  console.log('jquery ready.');
-  return jquery('body').on('click', '[href]', function(ev) {
-    var ethIntent, follow, href, query;
-    console.log('href click');
-    href = jquery(this).attr('href');
-    ethIntent = href.match(/^:eth\?(.*)/);
-    query = parseEthQuery(href);
-    console.log(this);
-    if (ethIntent) {
-      follow = !window.confirm("Open link in ÐApp: " + query.dapp);
-      if (follow) {
-        ev.preventDefault();
-        return false;
-      }
+  window.eth = {
+    client: 'ethos',
+    keys: ['asdasda'],
+    ready: function(cb) {
+      console.log('eth ready');
+      window.onload = function() {
+        var err;
+        console.log('window onload');
+        try {
+          return cb.call(window);
+        } catch (_error) {
+          err = _error;
+          return console.error('onload cb error', err);
+        }
+      };
+      return this;
+    },
+    getBalance: function() {
+      console.log('eth getBalance');
+      return 0;
+    },
+    stateAt: function() {
+      console.log('eth stateAt');
+      return 1;
+    },
+    transact: function() {
+      console.log('eth transact');
+      return null;
+    },
+    watch: function() {
+      return console.log('eth watch');
+    },
+    fromAscii: function(x) {
+      console.log('eth fromAscii');
+      return x.toString();
+    },
+    secretToAddress: function() {
+      console.log('eth secretToAddress');
+      return '1sasasdasdafasd';
+    },
+    getKey: function(callback) {
+      return client.call({
+        jsonrpc: '2.0',
+        method: 'getKey',
+        params: []
+      }, function(err, resp) {
+        if (!err && (resp != null ? resp.result : void 0)) {
+          console.log("RPC getKey completed: " + resp.result + ".");
+          return callback != null ? callback.call(window, null, resp.result) : void 0;
+        } else {
+          console.error("RPC getKey Failed.", err);
+          return callback != null ? callback.call(window, err, null) : void 0;
+        }
+      });
+    },
+    dapps: function(callback) {
+      return client.call({
+        jsonrpc: '2.0',
+        method: 'dapps',
+        params: []
+      }, function(err, resp) {
+        if (!err && (resp != null ? resp.result : void 0)) {
+          console.log("RPC Dapps completed: " + resp.result + ".");
+          return callback != null ? callback.call(window, null, resp.result) : void 0;
+        } else {
+          console.error("RPC Dapps Failed.", err);
+          return callback != null ? callback.call(window, err, null) : void 0;
+        }
+      });
+    }
+  };
+  parseEthQuery = function(href) {
+    var query;
+    query = url.parse(href, true).query;
+    if (!query.dapp) {
+      query.dapp = query.address ? 'etherchain' : query.ammount ? 'walleth' : void 0;
+    }
+    return query;
+  };
+  window.eth.ready(function() {
+    return console.log('Ethos eth Ready.');
+  });
+  jquery(function() {
+    var err, _ref;
+    try {
+      console.log('Ethos attaching URI Intent handlers.');
+      return jquery('body').on('click', '[href]', function(ev) {
+        var ethIntent, href, query;
+        href = jquery(this).attr('href');
+        console.log('href click: ' + href);
+        ethIntent = href.match(/^:eth\?(.*)/);
+        query = typeof parseEthQuery === "function" ? parseEthQuery(href) : void 0;
+        if (ethIntent) {
+          ev.preventDefault();
+          eth.dapps(function(err, dapps) {
+            var follow;
+            if (dapps.indexOf(query.dapp) >= 0) {
+              console.log('Dapp Installed open');
+              window.location = "/" + query.dapp;
+            } else {
+              follow = window.confirm("Open link in ÐApp: " + query.dapp);
+              if (follow) {
+                window.location = "/" + query.dapp;
+              }
+            }
+            return console.log('clicked: ', query, ' have: ', dapps);
+          });
+          return false;
+        } else {
+          return true;
+        }
+      });
+    } catch (_error) {
+      err = _error;
+      return (_ref = window.winston) != null ? _ref.error(err) : void 0;
     }
   });
-});
-
-console.log("Ethos inject end: ok.");
-
+  return console.log("Ethos inject end: ok.");
+})();
 
 
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+
 },{"jquery":34,"node-json-rpc":35,"url":31}],2:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
@@ -1777,8 +1886,15 @@ http.request = function (params, cb) {
     if (!params.host && params.hostname) {
         params.host = params.hostname;
     }
-    
-    if (!params.scheme) params.scheme = window.location.protocol.split(':')[0];
+
+    if (!params.protocol) {
+        if (params.scheme) {
+            params.protocol = params.scheme + ':';
+        } else {
+            params.protocol = window.location.protocol;
+        }
+    }
+
     if (!params.host) {
         params.host = window.location.hostname || window.location.host;
     }
@@ -1788,7 +1904,7 @@ http.request = function (params, cb) {
         }
         params.host = params.host.split(':')[0];
     }
-    if (!params.port) params.port = params.scheme == 'https' ? 443 : 80;
+    if (!params.port) params.port = params.protocol == 'https:' ? 443 : 80;
     
     var req = new Request(new xhrHttp, params);
     if (cb) req.on('response', cb);
@@ -1911,7 +2027,7 @@ var Request = module.exports = function (xhr, params) {
     self.xhr = xhr;
     self.body = [];
     
-    self.uri = (params.scheme || 'http') + '://'
+    self.uri = (params.protocol || 'http:') + '//'
         + params.host
         + (params.port ? ':' + params.port : '')
         + (params.path || '/')
