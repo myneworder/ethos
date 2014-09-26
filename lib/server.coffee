@@ -24,7 +24,7 @@ app.set( 'view engine', 'jade' )
 app.listen( PORT )
 
 winston.add( winston.transports.File, { 
-  filename: 'ethos.log',
+  filename: './logs/ethos.log',
   handleExceptions: true
 })
 
@@ -35,34 +35,17 @@ process.on 'uncaughtException', (err) ->
 winston.info( "Ethos server started at http://localhost:#{ PORT }" )
 
 # FIXME: Techinal Debt.
-# Temprary solution to node-ethereum failing when run in a node-webkit context.
+# Temporary solution to node-ethereum failing when run in a node-webkit context.
 # Run node-ethereum via the shell, this makes node.js a runtime dependency.
 
-exec 'coffee ./lib/ethereum-server.coffee -n ' + ETH_PORT, (error, stdout, stderr) ->
-  if error?
-    console.log('exec error: ' + error)
-    console.log('stderr: ' + stderr);
-  else
-    console.log('Child process Node-v running.')
-    console.log('stdout: ' + stdout)
-
-# Ethereum Network
-# FIXME: Does not currently compile on windows
-# try
-
-#   nodeEthereum = require( './node-ethereum' )
-#   ethApp = new nodeEthereum()
-  
-#   ethApp.start ->
-#     winston.info( 'node-ethereum running...' )
-
-# catch err
-#   winston.error "Error loading node-ethereum", err
-
-# winston.info "Loaded ethereum-node."
+#exec 'coffee ./lib/ethereum-server.coffee -n ' + ETH_PORT, (error) ->
+#  winston.error( "Error running node-ethereum process.", error ) if error
 
 # DApp Manager
-dappManager = new DAppManager( rootDir: path.join( __dirname, '../dapps' ) )
+dappManager = new DAppManager
+  rootDir: path.join( __dirname, '../dapps' )
+  winston: winston
+
 winston.info 'DApps: ', Object.keys dappManager.dapps
 
 # RPC
