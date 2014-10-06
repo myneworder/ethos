@@ -1,6 +1,7 @@
 
 require('coffee-script/register')
 
+fs = require( 'fs' )
 express = require( 'express' )
 http = require( 'http' )
 request = require( 'request' )
@@ -18,7 +19,7 @@ RPC_PORT = 7001
 ETH_PORT = 7002
 
 app = express()
-app.set( 'views', __dirname + '/../views' )
+app.set( 'views', __dirname + '/../app/views' )
 app.set( 'view engine', 'jade' )
 
 app.listen( PORT )
@@ -41,7 +42,7 @@ winston.info( "Ethos server started at http://localhost:#{ PORT }" )
 #exec 'coffee ./lib/ethereum-server.coffee -n ' + ETH_PORT, (error) ->
 #  winston.error( "Error running node-ethereum process.", error ) if error
 
-# DApp Manager
+# ÐApp Manager
 dappManager = new DAppManager
   rootDir: path.join( __dirname, '../dapps' )
   winston: winston
@@ -59,27 +60,28 @@ rpcServer.start (err) ->
   throw err if err
   winston.info( "Ethos RPC Server running on port #{ RPC_PORT }")
 
-# Intercepts all requests and checks if it needs to load a DApp.
-# If a DApp is loaded then assets are served from that DApps root folder.
+# Intercepts all requests and checks if it needs to load a ÐApp.
+# If a ÐApp is loaded then assets are served from that DApps root folder.
 app.use( dappManager.middleware( app, winston ) )
 
 # Ethos specific routes
 # Redirect to ethos namespace
 app.get '/', (req,res) -> 
-  winston.info "Redirecting to Ethos DApp."
+  winston.info "Redirecting to Ethos ÐApp."
   res.redirect '/ethos'
-
-# Serve favicon
-app.get '/favicon.ico', (req,res) -> res.sendFile( './assets/favicon.ico', root: './static' )
 
 # Render Ethos index view
 app.get '/ethos/', (req, res) ->
   dappManager.currentDApp = 'ethos'
+  console.log dappManager.dapps
   res.render( 'index', { dapps: dappManager.dapps } )
 
+app.get '/ethos/dialog', (req, res) ->
+  res.render( 'dialog' )
+
 # Serve other ethos assets
-app.get '/ethos/static/*', (req, res) ->
-  res.sendFile( req.url.replace('/ethos/static/', '' )  , {root: './static'})
+app.get '/ethos/app/*', (req, res) ->
+  res.sendFile( req.url.replace('/ethos/app/', '' ), {root: './app'} )
 
 # 404
 app.get '*', (req,res) ->

@@ -1,4 +1,6 @@
 node_modules
 build/Ethos
+app/scripts
+logs/*.log
 cache
 npm-debug.log
