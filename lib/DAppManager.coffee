@@ -19,7 +19,6 @@ class DAppManager
 		@dapps = @getDApps()
 		@currentDApp = 'ethos'
 		@dappConfig = dappConfig
-		@winston.info "INFO DAPPS", @dapps
 
 	getDApps: ->
 		dapps = {}
@@ -62,13 +61,20 @@ class DAppManager
 		app.use( /^\/(.*)/i, @renderDApp )
 
 		(req,res,next) =>
-			dappName = @currentDApp;
+			dappName = @currentDApp
+			winston = @winston
 			@winston.info "URL: #{ req.url } is asset: #{ @isAsset( req ) }"
 			# Assets will have extentions and no slashes
 			
 			if @isAsset( req ) and dappName isnt 'ethos'
-				@winston.info( "Serving ÐApp asset: #{ req.url }" )
-				res.sendFile( req.url, {root: "./dapps/#{ dappName }"} );
+				root = "./dapps/#{ dappName }"
+				url = path.join( root, req.url )
+				fs.stat url,  (err, stats) ->
+					unless err
+						winston.info( "Serving ÐApp asset: #{ req.url }" )
+						res.sendFile( req.url, root: root )
+					else
+						res.send( "var error = '404: #{ url }';" )
 			else
 				next()
 
