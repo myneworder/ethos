@@ -23,6 +23,13 @@ ETH_PORT = 7002
 winston.add winston.transports.File, 
   filename: './logs/ethos.log'
   handleExceptions: true
+  prettyPrint: false
+  level: 0
+  silent: false
+  colorize: true
+  timestamp: true
+  maxFiles: 1
+  json: false
 
 global.winston = winston
 
@@ -44,12 +51,19 @@ winston.info( "Ethos server started at http://localhost:#{ PORT }" )
 dappManager = new DAppManager
   rootDir: path.join( __dirname, '../dapps' )
   winston: winston
-winston.info 'DApps: ', Object.keys dappManager.dapps
+
+winston.info "Ethos ÐApps: #{ Object.keys( dappManager.dapps ).join(', ') }"
 
 
 app = express()
 app.set( 'views', __dirname + '/../app/views' )
 app.set( 'view engine', 'jade' )
+
+app.use (req, res, next) ->
+  res.on 'header', ->
+    console.trace('HEADERS GOING TO BE WRITTEN')
+  next()
+
 app.use( dappManager.middleware( app, winston ) )
 app.use( jsonrpc )
 app.listen( PORT )
@@ -62,6 +76,7 @@ rpcServer = new EthosRPC
   global: global
 
 app.all '/ethos/api', (req, res, next) ->
+  winston.info "Handling Ethos RPC request."
   rpcServer.handleRPC( req, res, next )
 
 
@@ -78,14 +93,17 @@ app.get '/', (req,res) ->
 # Render Ethos index view
 app.get '/ethos/', (req, res) ->
   dappManager.currentDApp = 'ethos'
+  winston.info "Serving Ethos."
   res.render( 'index', { dapps: dappManager.dapps } )
 
 app.get '/ethos/dialog', (req, res) ->
   dappManager.currentDApp = 'ethos'
+  winston.info "Serving Ethos dialog: #{ req.url }"
   res.render( 'dialog' )
 
 # Serve other ethos assets
 app.get '/ethos/app/*', (req, res) ->
+  winston.info "Serving Ethos asset: #{ req.url }"
   res.sendFile( req.url.replace('/ethos/app/', '' ), {root: './app'} )
 
 
@@ -126,4 +144,5 @@ new WatchedFile
 
 # 404
 app.get '*', (req,res) ->
+  winston.info "Serving Ethos 404 page. url: #{ req.url }"
   res.render( '404', { url: req.url } )
